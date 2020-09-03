@@ -88,7 +88,7 @@ will produce:
 
 2. Generate Affinity Tree, use metadata, detailed logging and default algorithm settings.
 ```
-python3 -m pangtreebuild --multialignemnt example_data/Ebola/multialignment.maf -metadata example_data/Ebola/metadata.csv -affinity tree -v
+python3 -m pangtreebuild --multialignment example_data/Ebola/multialignment.maf --metadata example_data/Ebola/metadata.csv --affinity tree -v
 ```
 will produce:
 

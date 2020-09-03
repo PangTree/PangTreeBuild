@@ -228,6 +228,21 @@ def _get_root_node(poagraph: graph.Poagraph,
     return affinity_node
 
 
+def _get_biggest_difference_between_compatibilities(compatibilities: Dict[msa.SequenceID, graph.Compatibility],
+                                                    candidates: List[msa.SequenceID]) -> float:
+    """
+    Calculates the biggest gap between compatibilities of qualified candidates.
+    This value is being used as a metric to select the best iteration of algorithm
+    whenever it surpasses the attempt threshold.
+    """
+    if len(candidates) <= 1:
+        return 0
+    comps = [compatibilities[x].value for x in candidates]
+    comps.sort()
+    diffs = [x[1] - x[0] for x in zip(comps[1:], comps)]
+    return max(diffs)
+
+
 def _get_children_nodes_looping(node: tree.AffinityNode,
                                 poagraph: graph.Poagraph,
                                 output_dir: Path,
@@ -247,6 +262,10 @@ def _get_children_nodes_looping(node: tree.AffinityNode,
         detailed_logger.info(f"### Getting child {len(so_far_cutoffs)}...")
         child_ready = False
         attempt = 0
+        max_diff = 0
+        max_candidates = []
+        max_comps = {}
+        max_candidate = None
         current_candidates = not_assigned_sequences_ids
         while not child_ready:
             consensus_candidate = poa.get_consensuses(poagraph,
@@ -265,9 +284,20 @@ def _get_children_nodes_looping(node: tree.AffinityNode,
                 so_far_cutoffs=so_far_cutoffs,
                 splitted_node_id=node.id_)
 
+            diff = _get_biggest_difference_between_compatibilities(compatibilities_to_consensus_candidate,
+                                                                   qualified_sequences_ids_candidates)
+
+            if diff > max_diff:
+                max_diff = diff
+                max_candidates = qualified_sequences_ids_candidates
+                max_comps = compatibilities_to_consensus_candidate
+                max_candidate = consensus_candidate
+
             if qualified_sequences_ids_candidates == current_candidates or attempt == 10:
                 if attempt == 10:
-                    detailed_logger.info("Attempt treshold 10 exceeded!")
+                    qualified_sequences_ids_candidates = max_candidates
+                    compatibilities_to_consensus_candidate = max_comps
+                    consensus_candidate = max_candidate
                 affinity_node_id += 1
 
                 affinity_node = tree.AffinityNode(
